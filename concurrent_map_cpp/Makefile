@@ -33,6 +33,9 @@ build:
 	@mkdir -p $(APP_DIR)
 	@mkdir -p $(OBJ_DIR)
 
+format:
+	find . -name "*.cpp" -o -name "*.h" | sed 's| |\\ |g' | xargs /opt/homebrew/opt/llvm/bin/clang-format -i
+
 debug: CXXFLAGS += -DDEBUG -g
 debug: all
 

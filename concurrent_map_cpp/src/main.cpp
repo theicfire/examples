@@ -1,16 +1,17 @@
-#include <iostream>
 #include <chrono>
+#include <iostream>
 #include <map>
-#include <optional>
 #include <mutex>
+#include <optional>
 #include <utility>
 
 template <typename K, typename V>
 class ConcurrentMap {
   using find_type = std::optional<V>;
-  public:
 
-  // We use a function template here to make M&& a "forward type aka universal type". This is helpful because we can insert both rvalues and lvalues.
+ public:
+  // We use a function template here to make M&& a "forward type aka universal
+  // type". This is helpful because we can insert both rvalues and lvalues.
   template <typename M>
   bool insert(const K& k, M&& v) {
     const std::lock_guard g(mut_);
@@ -47,7 +48,8 @@ class ConcurrentMap {
     return m_.clear();
   }
 
-  // I didn't define find_reference because that could create race conditions -- editing some reference at the same time.
+  // I didn't define find_reference because that could create race conditions --
+  // editing some reference at the same time.
   bool find_and(const K& k, const std::function<void(V&)>& f) {
     const std::lock_guard g(mut_);
     auto it = m_.find(k);
@@ -58,7 +60,8 @@ class ConcurrentMap {
     return false;
   }
 
-  // Note that this does not return a copy, but moves the type. So remove() is possible with move-only types.
+  // Note that this does not return a copy, but moves the type. So remove() is
+  // possible with move-only types.
   find_type remove(const K& k) {
     const std::lock_guard g(mut_);
     auto it = m_.find(k);
@@ -83,20 +86,20 @@ class ConcurrentMap {
     return std::nullopt;
   }
 
-  private:
+ private:
   std::map<K, V> m_;
   std::mutex mut_;
 };
 
 class Holder {
-  public:
-    Holder(int x): x_(x) {}
-    //Holder ( Holder && ) = default;
-    //Holder &  operator= ( Holder && ) = default;
-    //Holder ( const Holder & ) = delete;
-    //Holder & operator= ( const Holder & ) = delete;
+ public:
+  Holder(int x) : x_(x) {}
+  // Holder ( Holder && ) = default;
+  // Holder &  operator= ( Holder && ) = default;
+  // Holder ( const Holder & ) = delete;
+  // Holder & operator= ( const Holder & ) = delete;
 
-    int x_;
+  int x_;
 };
 
 void use_int() {
@@ -104,32 +107,25 @@ void use_int() {
   ConcurrentMap<int, Value> m;
   int thing = 4;
   m.insert(3, thing);
+  // TODO I'm not sure why I can't edit "thing" here and have the changes not
+  // show up. From what I can tell, insert_or_assign will take the l-value,
+  // right? Seems like it still makes a copy though?
   thing = 10;
   m.insert(4, 4);
   m.insert(5, 4);
 
-
   printf("m size %d\n", m.size());
-  m.find_and(4, [](Value& x) {
-      x = 6;
-      });
-  m.find_and(3, [](Value& x) {
-      printf("m[3] =  %d\n", x);
-      });
-  m.find_and(4, [](Value& x) {
-      printf("m[4] =  %d\n", x);
-      });
+  m.find_and(4, [](Value& x) { x = 6; });
+  m.find_and(3, [](Value& x) { printf("m[3] =  %d\n", x); });
+  m.find_and(4, [](Value& x) { printf("m[4] =  %d\n", x); });
   printf("m[4] exists?  %s\n", m.contains(4) ? "yes" : "no");
-  m.remove_if(4, [](const Value& v) {
-      return v < 10;
-      });
+  m.remove_if(4, [](const Value& v) { return v < 10; });
   printf("m[4] exists?  %s\n", m.contains(4) ? "yes" : "no");
-
 }
 
-
-
 void use_unique() {
+  // unique_ptr is a move-only type, so I'm showing ConcurrentMap is useable
+  // with this.
   using Value = std::unique_ptr<int>;
   ConcurrentMap<int, Value> m;
   auto thing = std::make_unique<int>(4);
@@ -137,23 +133,13 @@ void use_unique() {
   m.insert(4, std::make_unique<int>(4));
   m.insert(5, std::make_unique<int>(4));
 
-
   printf("m size %d\n", m.size());
-  m.find_and(4, [](Value& x) {
-      *x = 6;
-      });
-  m.find_and(3, [](Value& x) {
-      printf("m[3] =  %d\n", *x);
-      });
-  m.find_and(4, [](Value& x) {
-      printf("m[4] =  %d\n", *x);
-      });
+  m.find_and(4, [](Value& x) { *x = 6; });
+  m.find_and(3, [](Value& x) { printf("m[3] =  %d\n", *x); });
+  m.find_and(4, [](Value& x) { printf("m[4] =  %d\n", *x); });
   printf("m[4] exists?  %s\n", m.contains(4) ? "yes" : "no");
-  m.remove_if(4, [](const Value& v) {
-      return *v < 10;
-      });
+  m.remove_if(4, [](const Value& v) { return *v < 10; });
   printf("m[4] exists?  %s\n", m.contains(4) ? "yes" : "no");
-
 }
 
 void use_shared() {
@@ -166,22 +152,12 @@ void use_shared() {
   m.insert(5, std::make_shared<int>(4));
 
   printf("m size %d\n", m.size());
-  m.find_and(4, [](Value& x) {
-      *x = 6;
-      });
-  m.find_and(3, [](Value& x) {
-      printf("m[3] =  %d\n", *x);
-      });
-  m.find_and(4, [](Value& x) {
-      printf("m[4] =  %d\n", *x);
-      });
+  m.find_and(4, [](Value& x) { *x = 6; });
+  m.find_and(3, [](Value& x) { printf("m[3] =  %d\n", *x); });
+  m.find_and(4, [](Value& x) { printf("m[4] =  %d\n", *x); });
   printf("m[4] exists?  %s\n", m.contains(4) ? "yes" : "no");
-  m.remove_if(4, [](const Value& v) {
-      return *v < 10;
-      });
+  m.remove_if(4, [](const Value& v) { return *v < 10; });
   printf("m[4] exists?  %s\n", m.contains(4) ? "yes" : "no");
-
-
 }
 
 int main() {
