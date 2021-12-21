@@ -8,22 +8,23 @@
 #include <chrono>
 
 #include "demo.pb.h"
-constexpr int BUFFER_LEN = 10000;
+constexpr int BUFFER_LEN = 100000;
 
 using namespace std;
 
 
-uint8_t data[BUFFER_LEN];
+uint8_t buffer[BUFFER_LEN];
 uint8_t memcpy_dest[BUFFER_LEN];
 
 void testProto() {
   demo::Person* person = new demo::Person();
-  person->set_data(data, BUFFER_LEN);
+  person->set_data(buffer, BUFFER_LEN);
+  //delete person; // The main answer! Makes things 4x faster.
 }
 
 void testMemcpy() {
   demo::Person* person = new demo::Person();
-  memcpy(memcpy_dest, data, BUFFER_LEN);
+  memcpy(memcpy_dest, buffer, BUFFER_LEN);
 }
 
 int main(int argc, char* argv[]) {
